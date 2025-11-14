@@ -8,7 +8,7 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors({ origin: "http://localhost:5173" }));
+app.use(cors({ origin: "http://localhost:5173", credentials: true }));
 app.use(express.json());
 
 main()
@@ -46,6 +46,11 @@ app.delete("/api/todos/:id", async (req, res) => {
   if (!deletedTodo) {
     return res.status(404).json({ message: "Todo not found" });
   }
+  res.status(204).end();
+});
+
+app.delete("/api/todos", async (req, res) => {
+  await Todo.deleteMany({});
   res.status(204).end();
 });
 

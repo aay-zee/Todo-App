@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { api } from "./api/axiosInstance";
 
 export default function App() {
   const [todos, setTodos] = useState([]);
@@ -9,15 +10,18 @@ export default function App() {
 
   // Load todos on mount
   useEffect(() => {
-    setLoading(true);
-    fetch("/api/todos")
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to load todos");
-        return res.json();
-      })
-      .then((data) => setTodos(data))
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
+    const fetchTodos = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await api.get("/todos");
+        setTodos(response.data);
+      } catch (error) {
+        setError("Failed to load todos: " + error.message);
+      }
+      setLoading(false);
+    };
+    fetchTodos();
   }, []);
 
   // Create a new todo
@@ -26,18 +30,14 @@ export default function App() {
     const clean = text.trim();
     if (!clean) return;
     setError(null);
-    const res = await fetch("/api/todos", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: clean, completed: false }),
-    });
-    if (!res.ok) {
-      setError("Failed to create todo");
-      return;
+    try {
+      const response = await api.post("/todos", { text: clean });
+      console.log("Adding Todo: ", response);
+      setTodos((t) => [...t, response.data]);
+      setText("");
+    } catch (error) {
+      setError("Failed to add todo: " + error.message);
     }
-    const created = await res.json();
-    setTodos((t) => [created, ...t]);
-    setText("");
   };
 
   const toggleStatus = (id) => {
@@ -48,25 +48,38 @@ export default function App() {
       )
     );
     // Optionally, update the backend here to persist the change
-    fetch(`/api/todos/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(
-        todos.find((todo) => todo._id === id).completed
-          ? { completed: false }
-          : { completed: true }
-      ),
-    });
+    try {
+      const todo = todos.find((t) => t._id === id);
+      api.patch(`/todos/${id}`, { completed: !todo.completed });
+    } catch (error) {
+      console.error("Failed to update todo status:", error);
+      setError("Failed to update todo status: " + error.message);
+    }
   };
 
   const clearAllTodos = () => {
     setTodos([]);
+    // Optionally, call your backend API to clear all todos
+    try {
+      console.log("Clearing All the Todos: ", api.delete("/todos"));
+    } catch (error) {
+      console.error("Failed to clear todos:", error);
+      setError("Failed to clear todos: " + error.message);
+    }
   };
 
   const deleteTodo = (id) => {
     // Placeholder for deleting a todo
     // You can implement this function to delete a specific todo by its ID
     setTodos((t) => t.filter((todo) => todo._id !== id));
+
+    // Optionally, call your backend API to delete the todo
+    try {
+      console.log("Deleting Todo: ", api.delete(`/todos/${id}`));
+    } catch (error) {
+      console.error("Failed to delete todo:", error);
+      setError("Failed to delete todo: " + error.message);
+    }
   };
 
   return (
