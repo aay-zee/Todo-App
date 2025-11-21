@@ -38,6 +38,7 @@ app.patch("/api/todos/:id", async (req, res) => {
   if (!updatedTodo) {
     return res.status(404).json({ message: "Todo not found" });
   }
+  console.log("Updated Todo:", updatedTodo);
   res.json(updatedTodo);
 });
 

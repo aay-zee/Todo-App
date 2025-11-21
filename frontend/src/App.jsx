@@ -7,21 +7,29 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  // Editing UI state (user will implement persistence logic)
+  const [editingId, setEditingId] = useState(null);
+  const [editText, setEditText] = useState("");
 
   // Load todos on mount
   useEffect(() => {
-    const fetchTodos = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await api.get("/todos");
-        setTodos(response.data);
-      } catch (error) {
-        setError("Failed to load todos: " + error.message);
-      }
-      setLoading(false);
-    };
-    fetchTodos();
+    // const fetchTodos = async () => {
+    //   setLoading(true);
+    //   setError(null);
+    //   try {
+    //     const response = await api.get("/todos");
+    //     setTodos(response.data);
+    //   } catch (error) {
+    //     setError("Failed to load todos: " + error.message);
+    //   }
+    //   setLoading(false);
+    // };
+    // fetchTodos();
+    setLoading(true);
+    setError(null);
+    localStorage.getItem("todos") &&
+      setTodos(JSON.parse(localStorage.getItem("todos")));
+    setLoading(false);
   }, []);
 
   // Create a new todo
@@ -30,42 +38,61 @@ export default function App() {
     const clean = text.trim();
     if (!clean) return;
     setError(null);
-    try {
-      const response = await api.post("/todos", { text: clean });
-      console.log("Adding Todo: ", response);
-      setTodos((t) => [...t, response.data]);
-      setText("");
-    } catch (error) {
-      setError("Failed to add todo: " + error.message);
-    }
+    // try {
+    //   const response = await api.post("/todos", { text: clean });
+    //   console.log("Adding Todo: ", response);
+    //   setTodos((t) => [...t, response.data]);
+    //   setText("");
+    // } catch (error) {
+    //   setError("Failed to add todo: " + error.message);
+    // }
+
+    const newTodo = {
+      _id: Date.now().toString(),
+      text: clean,
+      completed: false,
+    };
+    setTodos((t) => {
+      const updatedTodos = [...t, newTodo];
+      localStorage.setItem("todos", JSON.stringify(updatedTodos));
+      return updatedTodos;
+    });
+    setText("");
   };
 
   const toggleStatus = (id) => {
     // Placeholder for toggling todo status
-    setTodos((t) =>
-      t.map((todo) =>
-        todo._id === id ? { ...todo, completed: !todo.completed } : todo
-      )
-    );
+    // setTodos((t) =>
+    //   t.map((todo) =>
+    //     todo._id === id ? { ...todo, completed: !todo.completed } : todo
+    //   )
+    // );
     // Optionally, update the backend here to persist the change
-    try {
-      const todo = todos.find((t) => t._id === id);
-      api.patch(`/todos/${id}`, { completed: !todo.completed });
-    } catch (error) {
-      console.error("Failed to update todo status:", error);
-      setError("Failed to update todo status: " + error.message);
-    }
+    // try {
+    //   const todo = todos.find((t) => t._id === id);
+    //   api.patch(`/todos/${id}`, { completed: !todo.completed });
+    // } catch (error) {
+    //   console.error("Failed to update todo status:", error);
+    //   setError("Failed to update todo status: " + error.message);
+    // }
+
+    const updatedTodos = todos.map((todo) =>
+      todo._id === id ? { ...todo, completed: !todo.completed } : todo
+    );
+    localStorage.setItem("todos", JSON.stringify(updatedTodos));
+    setTodos(updatedTodos);
   };
 
   const clearAllTodos = () => {
     setTodos([]);
     // Optionally, call your backend API to clear all todos
-    try {
-      console.log("Clearing All the Todos: ", api.delete("/todos"));
-    } catch (error) {
-      console.error("Failed to clear todos:", error);
-      setError("Failed to clear todos: " + error.message);
-    }
+    // try {
+    //   console.log("Clearing All the Todos: ", api.delete("/todos"));
+    // } catch (error) {
+    //   console.error("Failed to clear todos:", error);
+    //   setError("Failed to clear todos: " + error.message);
+    // }
+    localStorage.removeItem("todos");
   };
 
   const deleteTodo = (id) => {
@@ -74,12 +101,50 @@ export default function App() {
     setTodos((t) => t.filter((todo) => todo._id !== id));
 
     // Optionally, call your backend API to delete the todo
-    try {
-      console.log("Deleting Todo: ", api.delete(`/todos/${id}`));
-    } catch (error) {
-      console.error("Failed to delete todo:", error);
-      setError("Failed to delete todo: " + error.message);
-    }
+    // try {
+    //   console.log("Deleting Todo: ", api.delete(`/todos/${id}`));
+    // } catch (error) {
+    //   console.error("Failed to delete todo:", error);
+    //   setError("Failed to delete todo: " + error.message);
+    // }
+    const updatedTodos = todos.filter((todo) => todo._id !== id);
+    localStorage.setItem("todos", JSON.stringify(updatedTodos));
+    setTodos(updatedTodos);
+  };
+
+  // Start editing a todo (UI only)
+  const startEditing = (todo) => {
+    setEditingId(todo._id);
+    setEditText(todo.text);
+  };
+
+  // Cancel editing
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditText("");
+  };
+
+  // Submit edited text (UI only). User will add backend + state update logic.
+  const submitEdit = (id) => {
+    // try {
+    //   console.log(
+    //     "Editing Todo: ",
+    //     api.patch(`/todos/${id}`, { text: editText })
+    //   );
+    //   setTodos((t) =>
+    //     t.map((todo) => (todo._id === id ? { ...todo, text: editText } : todo))
+    //   );
+    // } catch (error) {
+    //   console.error("Failed to edit todo:", error);
+    //   setError("Failed to edit todo: " + error.message);
+    // }
+    const updatedTodos = todos.map((todo) =>
+      todo._id === id ? { ...todo, text: editText } : todo
+    );
+    localStorage.setItem("todos", JSON.stringify(updatedTodos));
+    setTodos(updatedTodos);
+    setEditingId(null);
+    setEditText("");
   };
 
   return (
@@ -147,7 +212,7 @@ export default function App() {
                       aria-label={
                         t.completed ? "Mark as incomplete" : "Mark as complete"
                       }
-                      className={`mt-1 inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border text-[10px] font-bold transition ${
+                      className={`mt-1 inline-flex h-6 w-6 sm:h-5 sm:w-5 flex-shrink-0 items-center justify-center rounded border text-[11px] font-bold transition ${
                         t.completed
                           ? "border-green-500 bg-green-500 text-white"
                           : "border-gray-300 text-gray-400 hover:border-blue-400"
@@ -156,15 +221,64 @@ export default function App() {
                       {t.completed ? "✓" : ""}
                     </button>
 
-                    <p
-                      className={`flex-1 leading-relaxed ${
-                        t.completed
-                          ? "text-gray-400 line-through"
-                          : "text-gray-700"
-                      }`}
-                    >
-                      {t.text}
-                    </p>
+                    {editingId === t._id ? (
+                      <div className="flex-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+                        <input
+                          type="text"
+                          value={editText}
+                          onChange={(e) => setEditText(e.target.value)}
+                          className="w-full rounded border border-blue-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-400"
+                          aria-label="Edit todo text"
+                          autoFocus
+                        />
+                        <div className="flex flex-col sm:flex-row w-full sm:w-auto items-stretch sm:items-center gap-2 sm:gap-1">
+                          <button
+                            type="button"
+                            onClick={() => submitEdit(t._id)}
+                            className="w-full sm:w-auto rounded bg-blue-600 px-4 py-2 text-xs sm:text-sm font-medium text-white shadow-sm hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            aria-label="Save edited todo"
+                          >
+                            Save
+                          </button>
+                          <button
+                            type="button"
+                            onClick={cancelEditing}
+                            className="w-full sm:w-auto rounded border border-gray-300 bg-white px-4 py-2 text-xs sm:text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300"
+                            aria-label="Cancel editing"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p
+                        className={`flex-1 leading-relaxed ${
+                          t.completed
+                            ? "text-gray-400 line-through"
+                            : "text-gray-700"
+                        }`}
+                      >
+                        {t.text}
+                      </p>
+                    )}
+
+                    {editingId !== t._id && (
+                      <button
+                        type="button"
+                        aria-label="Edit todo"
+                        className="opacity-60 transition hover:opacity-100 text-gray-400 hover:text-blue-600 cursor-pointer"
+                        onClick={() => startEditing(t)}
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                          className="h-5 w-5"
+                        >
+                          <path d="M16.862 3.487a2.25 2.25 0 0 1 3.182 3.182l-2.06 2.06-3.182-3.182 2.06-2.06ZM13.95 6.4 5.682 14.668a4.5 4.5 0 0 0-1.17 2.028l-.63 2.522a.75.75 0 0 0 .91.91l2.522-.63a4.5 4.5 0 0 0 2.027-1.17L17.64 10.05l-3.69-3.65Z" />
+                        </svg>
+                      </button>
+                    )}
 
                     <button
                       type="button"
@@ -202,6 +316,25 @@ export default function App() {
           </div>
         </div>
       </main>
+      <footer className="mx-auto mt-8 w-full max-w-xl px-6 pb-8 font-sans">
+        <div className="rounded-lg border border-gray-200 bg-white/70 backdrop-blur-sm px-4 py-3 text-center text-xs sm:text-sm text-gray-600 shadow-sm">
+          <p>
+            <span className="font-semibold">Todo App</span> • LocalStorage
+            version • Hosted on
+            <a
+              href="https://aayzee.netlify.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-1 underline decoration-blue-400/50 underline-offset-2 hover:text-blue-600"
+            >
+              Netlify
+            </a>
+            <span className="ml-1 hidden sm:inline">
+              | © {new Date().getFullYear()}
+            </span>
+          </p>
+        </div>
+      </footer>
       {showConfirm && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
